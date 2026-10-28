@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -839,7 +840,42 @@ func runAgentCycle() error {
 				latestTimestamp = event.Timestamp
 			}
 		}
+		// Upload collected events before advancing the local checkpoint.
+		cfg, configErr := LoadAgentConfig()
+		if configErr != nil {
+			fmt.Println("[!] Secrust sync config unavailable:", configErr)
+			return configErr
+		}
 
+		client, clientErr := NewSecrustClient(cfg)
+		if clientErr != nil {
+			fmt.Println("[!] Secrust client unavailable:", clientErr)
+			return clientErr
+		}
+
+		batch := make([]SecrustEvent, 0, len(events))
+		for _, event := range events {
+			mapped, mapErr := ToSecrustEvent(event)
+			if mapErr != nil {
+				fmt.Println("[!] Event mapping failed:", mapErr)
+				return mapErr
+			}
+			batch = append(batch, mapped)
+		}
+
+		ctx, cancel := context.WithTimeout(
+			context.Background(),
+			20*time.Second,
+		)
+		syncErr := client.SendEvents(ctx, batch)
+		cancel()
+
+		if syncErr != nil {
+			fmt.Println("[!] Secrust event upload failed:", syncErr)
+			return syncErr
+		}
+
+		fmt.Printf("[+] Uploaded %d event(s) to Secrust\n", len(batch))
 		updateAgentLastEventTimestamp(latestTimestamp)
 	}
 

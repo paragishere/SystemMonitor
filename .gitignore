@@ -23,3 +23,7 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+agent/config.json
+agent/config.json.tmp*.exe
+config.json

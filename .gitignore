@@ -27,3 +27,8 @@ Thumbs.db
 agent/config.json
 agent/config.json.tmp*.exe
 config.json
+# Compiled binaries
+*.exe
+
+# Local agent configuration and secrets
+config.json
